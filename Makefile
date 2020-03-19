@@ -7,6 +7,10 @@ run-server:
 	go run ./cmd/server/main.go
 
 .PHONY:
+run-client:
+	go run ./cmd/client/main.go
+
+.PHONY:
 db-run:
 	docker run -d -p 27017-27019:27017-27019 --name mongodb mongo:4.2.3
 
