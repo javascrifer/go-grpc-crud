@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
 
 	"github.com/javascrifer/go-grpc-crud/internal/pkg/blogpb"
@@ -15,7 +14,7 @@ const (
 )
 
 func main() {
-	fmt.Println("Initializing client")
+	log.Println("initializing client")
 
 	cc, err := grpc.Dial(targetAddress, grpc.WithInsecure())
 	if err != nil {
@@ -24,10 +23,12 @@ func main() {
 	defer cc.Close()
 
 	c := blogpb.NewBlogServiceClient(cc)
-	createBlog(c)
+	// createBlog(c)
+	getBlog(c)
 }
 
 func createBlog(c blogpb.BlogServiceClient) {
+	log.Println("creating blog")
 	req := &blogpb.CreateBlogRequest{
 		Blog: &blogpb.Blog{
 			AuthorId: "niko",
@@ -39,16 +40,28 @@ func createBlog(c blogpb.BlogServiceClient) {
 	res, err := c.CreateBlog(context.Background(), req)
 	if err != nil {
 		logError(err)
-		return
 	}
 	log.Printf("newly created blog: %v\n", res.GetBlog())
+}
+
+func getBlog(c blogpb.BlogServiceClient) {
+	log.Println("receiving blog")
+	id := "5e73bd378a15391517ed0cfc"
+	req := &blogpb.GetBlogRequest{Id: id}
+
+	res, err := c.GetBlog(context.Background(), req)
+	if err != nil {
+		logError(err)
+		return
+	}
+	log.Printf("blog %s: %v\n", id, res.GetBlog())
 }
 
 func logError(err error) {
 	s, ok := status.FromError(err)
 	if ok {
-		log.Fatalf("[%v] error while creating blog: %v\n", s.Code(), s.Message())
+		log.Fatalf("[%v] blog grpc call error: %v\n", s.Code(), s.Message())
 	} else {
-		log.Fatalf("error while creating blog: %v\n", err)
+		log.Fatalf("blog grpc call error: %v\n", err)
 	}
 }

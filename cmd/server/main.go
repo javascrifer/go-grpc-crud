@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"net"
 	"os"
@@ -25,19 +24,17 @@ const (
 )
 
 func main() {
-	fmt.Println("initializing server")
+	log.Println("initializing server")
 
 	dbClient, err := newMongoClient()
 	if err != nil {
 		log.Fatalf("failed to connect to db: %v", err)
-		return
 	}
 	collection := dbClient.Database(dbName).Collection(dbCollectionName)
 
 	listener, err := net.Listen(listenerNetwork, listenerAddress)
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
-		return
 	}
 
 	s := grpc.NewServer()
@@ -45,7 +42,7 @@ func main() {
 	blogpb.RegisterBlogServiceServer(s, srv)
 
 	go func() {
-		fmt.Println("starting a server")
+		log.Println("starting a server")
 		if err := s.Serve(listener); err != nil {
 			log.Fatalf("failed to serve: %v", err)
 		}
@@ -55,7 +52,7 @@ func main() {
 	signal.Notify(c, os.Interrupt)
 
 	<-c
-	fmt.Println("stopping server, database and listener")
+	log.Println("stopping server, database and listener")
 	s.Stop()
 	dbClient.Disconnect(context.Background())
 	listener.Close()

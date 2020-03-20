@@ -2,8 +2,10 @@ package server
 
 import (
 	"context"
+	"log"
 
 	"github.com/javascrifer/go-grpc-crud/internal/pkg/blogpb"
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"google.golang.org/grpc/codes"
@@ -41,11 +43,13 @@ func (s *GRPCServer) CreateBlog(
 
 	res, err := s.blogCollection.InsertOne(context.Background(), mongoBlog)
 	if err != nil {
+		log.Printf("failed to create blog: %v", err)
 		return nil, status.Errorf(codes.Internal, "failed to create blog")
 	}
 
 	oid, ok := res.InsertedID.(primitive.ObjectID)
 	if !ok {
+		log.Printf("failed to parse object id: %v", res.InsertedID)
 		return nil, status.Errorf(codes.Internal, "failed to parse id")
 	}
 
@@ -55,6 +59,43 @@ func (s *GRPCServer) CreateBlog(
 			AuthorId: grpcBlog.GetAuthorId(),
 			Title:    grpcBlog.GetTitle(),
 			Content:  grpcBlog.GetContent(),
+		},
+	}, nil
+}
+
+// GetBlog returns one blog in the database
+func (s *GRPCServer) GetBlog(
+	ctx context.Context,
+	req *blogpb.GetBlogRequest,
+) (*blogpb.GetBlogResponse, error) {
+	id := req.GetId()
+	oid, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		log.Printf("failed to parse object id: %v", err)
+		return nil, status.Errorf(codes.InvalidArgument, "incorrect id")
+	}
+
+	filter := bson.M{"_id": oid}
+	res := s.blogCollection.FindOne(context.Background(), filter)
+	if err := res.Err(); err != nil {
+		log.Printf("failed to find blog: %v", err)
+		if err == mongo.ErrNoDocuments {
+			return nil, status.Errorf(codes.NotFound, "blog not found")
+		}
+		return nil, status.Errorf(codes.Internal, "failed to find blog")
+	}
+
+	mongoBlog := &blog{}
+	if err := res.Decode(mongoBlog); err != nil {
+		log.Printf("failed to decode blog: %v", err)
+	}
+
+	return &blogpb.GetBlogResponse{
+		Blog: &blogpb.Blog{
+			Id:       mongoBlog.ID.Hex(),
+			AuthorId: mongoBlog.AuthorID,
+			Title:    mongoBlog.Title,
+			Content:  mongoBlog.Content,
 		},
 	}, nil
 }
