@@ -99,6 +99,25 @@ func (s *GRPCServer) UpdateBlog(
 	return &blogpb.UpdateBlogResponse{Blog: mongoBlogToGrpc(mongoBlog)}, nil
 }
 
+// DeleteBlog deletes blog by given id from a database
+func (s *GRPCServer) DeleteBlog(
+	ctx context.Context,
+	req *blogpb.DeleteBlogRequest,
+) (*blogpb.DeleteBlogResponse, error) {
+	mongoBlog, err := getBlogByID(s, req.GetId())
+	if err != nil {
+		return nil, err
+	}
+
+	filter := getBlogFilter(mongoBlog.ID)
+	_, err = s.blogCollection.DeleteOne(context.Background(), filter)
+	if err != nil {
+		log.Printf("failed to delete blog: %v", err)
+		return nil, status.Errorf(codes.Internal, "failed to delete blog")
+	}
+	return &blogpb.DeleteBlogResponse{}, nil
+}
+
 func getBlogByID(s *GRPCServer, id string) (*blog, error) {
 	oid, err := primitive.ObjectIDFromHex(id)
 	if err != nil {

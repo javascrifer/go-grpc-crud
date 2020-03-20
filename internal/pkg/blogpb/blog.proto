@@ -23,8 +23,13 @@ message UpdateBlogRequest { Blog blog = 1; }
 
 message UpdateBlogResponse { Blog blog = 1; }
 
+message DeleteBlogRequest { string id = 1; }
+
+message DeleteBlogResponse {}
+
 service BlogService {
   rpc CreateBlog(CreateBlogRequest) returns (CreateBlogResponse);
   rpc GetBlog(GetBlogRequest) returns (GetBlogResponse);
   rpc UpdateBlog(UpdateBlogRequest) returns (UpdateBlogResponse);
+  rpc DeleteBlog(DeleteBlogRequest) returns (DeleteBlogResponse);
 }
