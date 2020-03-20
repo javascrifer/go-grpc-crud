@@ -2,7 +2,9 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
+	"time"
 
 	"github.com/javascrifer/go-grpc-crud/internal/pkg/blogpb"
 	"google.golang.org/grpc"
@@ -24,7 +26,8 @@ func main() {
 
 	c := blogpb.NewBlogServiceClient(cc)
 	// createBlog(c)
-	getBlog(c)
+	// getBlog(c)
+	updateBlog(c)
 }
 
 func createBlog(c blogpb.BlogServiceClient) {
@@ -50,6 +53,27 @@ func getBlog(c blogpb.BlogServiceClient) {
 	req := &blogpb.GetBlogRequest{Id: id}
 
 	res, err := c.GetBlog(context.Background(), req)
+	if err != nil {
+		logError(err)
+		return
+	}
+	log.Printf("blog %s: %v\n", id, res.GetBlog())
+}
+
+func updateBlog(c blogpb.BlogServiceClient) {
+	log.Println("updating blog")
+	id := "5e73bcd78a15391517ed0cfa"
+	now := time.Now().Unix()
+	req := &blogpb.UpdateBlogRequest{
+		Blog: &blogpb.Blog{
+			Id:       id,
+			AuthorId: fmt.Sprintf("author %v", now),
+			Title:    fmt.Sprintf("title %v", now),
+			Content:  fmt.Sprintf("content %v", now),
+		},
+	}
+
+	res, err := c.UpdateBlog(context.Background(), req)
 	if err != nil {
 		logError(err)
 		return

@@ -69,13 +69,44 @@ func (s *GRPCServer) GetBlog(
 	req *blogpb.GetBlogRequest,
 ) (*blogpb.GetBlogResponse, error) {
 	id := req.GetId()
+	mongoBlog, err := getBlogByID(s, id)
+	if err != nil {
+		return nil, err
+	}
+	return &blogpb.GetBlogResponse{Blog: mongoBlogToGrpc(mongoBlog)}, nil
+}
+
+// UpdateBlog updates value of the blog in the database and returns updated value
+func (s *GRPCServer) UpdateBlog(
+	ctx context.Context,
+	req *blogpb.UpdateBlogRequest,
+) (*blogpb.UpdateBlogResponse, error) {
+	grpcBlog := req.GetBlog()
+	mongoBlog, err := getBlogByID(s, grpcBlog.GetId())
+	if err != nil {
+		return nil, err
+	}
+	mongoBlog.AuthorID = grpcBlog.GetAuthorId()
+	mongoBlog.Title = grpcBlog.GetTitle()
+	mongoBlog.Content = grpcBlog.GetContent()
+
+	filter := getBlogFilter(mongoBlog.ID)
+	_, err = s.blogCollection.ReplaceOne(context.Background(), filter, mongoBlog)
+	if err != nil {
+		log.Printf("failed to update blog: %v", err)
+		return nil, status.Errorf(codes.Internal, "failed to update blog")
+	}
+	return &blogpb.UpdateBlogResponse{Blog: mongoBlogToGrpc(mongoBlog)}, nil
+}
+
+func getBlogByID(s *GRPCServer, id string) (*blog, error) {
 	oid, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
 		log.Printf("failed to parse object id: %v", err)
 		return nil, status.Errorf(codes.InvalidArgument, "incorrect id")
 	}
 
-	filter := bson.M{"_id": oid}
+	filter := getBlogFilter(oid)
 	res := s.blogCollection.FindOne(context.Background(), filter)
 	if err := res.Err(); err != nil {
 		log.Printf("failed to find blog: %v", err)
@@ -88,14 +119,21 @@ func (s *GRPCServer) GetBlog(
 	mongoBlog := &blog{}
 	if err := res.Decode(mongoBlog); err != nil {
 		log.Printf("failed to decode blog: %v", err)
+		return nil, status.Errorf(codes.Internal, "failed to decode blog")
 	}
 
-	return &blogpb.GetBlogResponse{
-		Blog: &blogpb.Blog{
-			Id:       mongoBlog.ID.Hex(),
-			AuthorId: mongoBlog.AuthorID,
-			Title:    mongoBlog.Title,
-			Content:  mongoBlog.Content,
-		},
-	}, nil
+	return mongoBlog, nil
+}
+
+func getBlogFilter(oid primitive.ObjectID) primitive.M {
+	return bson.M{"_id": oid}
+}
+
+func mongoBlogToGrpc(b *blog) *blogpb.Blog {
+	return &blogpb.Blog{
+		Id:       b.ID.Hex(),
+		AuthorId: b.AuthorID,
+		Title:    b.Title,
+		Content:  b.Content,
+	}
 }

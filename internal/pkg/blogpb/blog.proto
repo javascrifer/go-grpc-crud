@@ -19,7 +19,12 @@ message GetBlogRequest { string id = 1; }
 
 message GetBlogResponse { Blog blog = 1; }
 
+message UpdateBlogRequest { Blog blog = 1; }
+
+message UpdateBlogResponse { Blog blog = 1; }
+
 service BlogService {
   rpc CreateBlog(CreateBlogRequest) returns (CreateBlogResponse);
   rpc GetBlog(GetBlogRequest) returns (GetBlogResponse);
+  rpc UpdateBlog(UpdateBlogRequest) returns (UpdateBlogResponse);
 }
