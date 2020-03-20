@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"io"
 	"log"
 	"time"
 
@@ -28,7 +29,8 @@ func main() {
 	// createBlog(c)
 	// getBlog(c)
 	// updateBlog(c)
-	deleteBlog(c)
+	// deleteBlog(c)
+	listBlog(c)
 }
 
 func createBlog(c blogpb.BlogServiceClient) {
@@ -92,6 +94,26 @@ func deleteBlog(c blogpb.BlogServiceClient) {
 		return
 	}
 	log.Printf("blog %s deleted\n", id)
+}
+
+func listBlog(c blogpb.BlogServiceClient) {
+	log.Println("listing blog")
+	req := &blogpb.ListBlogRequest{}
+	stream, err := c.ListBlog(context.Background(), req)
+	if err != nil {
+		logError(err)
+	}
+
+	for {
+		res, err := stream.Recv()
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+			logError(err)
+		}
+		log.Printf("blog from stream: %v\n", res.GetBlog())
+	}
 }
 
 func logError(err error) {

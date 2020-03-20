@@ -118,6 +118,35 @@ func (s *GRPCServer) DeleteBlog(
 	return &blogpb.DeleteBlogResponse{}, nil
 }
 
+// ListBlog sends all blogs inside a database as a stream one by one
+func (s *GRPCServer) ListBlog(
+	_ *blogpb.ListBlogRequest,
+	stream blogpb.BlogService_ListBlogServer,
+) error {
+	ctx := context.Background()
+	c, err := s.blogCollection.Find(ctx, bson.D{})
+	if err != nil {
+		log.Printf("failed to get blog list: %v", err)
+		return status.Errorf(codes.Internal, "failed to get blog list")
+	}
+	defer c.Close(ctx)
+
+	for c.Next(ctx) {
+		b := &blog{}
+		if err := c.Decode(b); err != nil {
+			log.Printf("failed to decode blog: %v", err)
+			return status.Errorf(codes.Internal, "failed to decode blog")
+		}
+		stream.Send(&blogpb.ListBlogResponse{Blog: mongoBlogToGrpc(b)})
+	}
+
+	if err := c.Err(); err != nil {
+		log.Printf("internal server error: %v", err)
+		return status.Errorf(codes.Internal, "internal server error")
+	}
+	return nil
+}
+
 func getBlogByID(s *GRPCServer, id string) (*blog, error) {
 	oid, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
