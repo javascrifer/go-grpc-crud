@@ -2,37 +2,48 @@ package main
 
 import (
 	"context"
+	"flag"
 	"log"
 	"net"
 	"os"
 	"os/signal"
 	"time"
 
+	"github.com/BurntSushi/toml"
 	"github.com/javascrifer/go-grpc-crud/internal/pkg/blogpb"
+	"github.com/javascrifer/go-grpc-crud/internal/pkg/infrastructure"
 	"github.com/javascrifer/go-grpc-crud/internal/pkg/server"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+	"go.mongodb.org/mongo-driver/mongo/readpref"
 	"google.golang.org/grpc"
 )
 
-const (
-	dbURI            = "mongodb://localhost:27017"
-	dbName           = "bloggrpc"
-	dbCollectionName = "blog"
-	listenerNetwork  = "tcp"
-	listenerAddress  = "0.0.0.0:50051"
-)
+var configPath string
+
+func init() {
+	flag.StringVar(&configPath, "config-path", "configs/server/dev.toml", "path to server config file")
+}
 
 func main() {
-	log.Println("initializing server")
+	log.Println("parsing flags")
+	flag.Parse()
 
-	dbClient, err := newMongoClient()
+	log.Println("initializing config")
+	config := infrastructure.NewServerConfig()
+	if _, err := toml.DecodeFile(configPath, &config); err != nil {
+		log.Fatalf("failed to read config: %v", err)
+	}
+
+	log.Println("connecting to database")
+	dbClient, err := newMongoClient(config.Mongo.URL)
 	if err != nil {
 		log.Fatalf("failed to connect to db: %v", err)
 	}
-	collection := dbClient.Database(dbName).Collection(dbCollectionName)
+	collection := dbClient.Database(config.Mongo.DB).Collection(config.Mongo.Collection)
 
-	listener, err := net.Listen(listenerNetwork, listenerAddress)
+	log.Println("initializing listener")
+	listener, err := net.Listen(config.Listener.Network, config.Listener.Address)
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
 	}
@@ -58,16 +69,22 @@ func main() {
 	listener.Close()
 }
 
-func newMongoClient() (*mongo.Client, error) {
+func newMongoClient(dbURI string) (*mongo.Client, error) {
 	opts := options.Client().ApplyURI(dbURI)
 	client, err := mongo.NewClient(opts)
 	if err != nil {
 		return nil, err
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
-	defer cancel()
-	if err := client.Connect(ctx); err != nil {
+	connectCtx, cancelConnect := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancelConnect()
+	if err := client.Connect(connectCtx); err != nil {
+		return nil, err
+	}
+
+	pingCtx, cancelPing := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancelPing()
+	if err := client.Ping(pingCtx, readpref.Primary()); err != nil {
 		return nil, err
 	}
 

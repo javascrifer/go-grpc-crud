@@ -26,7 +26,7 @@ func main() {
 	defer cc.Close()
 
 	c := blogpb.NewBlogServiceClient(cc)
-	// createBlog(c)
+	createBlog(c)
 	// getBlog(c)
 	// updateBlog(c)
 	// deleteBlog(c)

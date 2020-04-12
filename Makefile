@@ -11,17 +11,19 @@ run-client:
 	go run ./cmd/client/main.go
 
 .PHONY:
+docker-build-server:
+	rm -f ./bin/grpc-server/server
+	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o ./bin/grpc-server/server ./cmd/server/main.go
+	docker image build -t nikasdocker/go-grpc-crud-server .
+
+.PHONY:
 db-run:
-	docker run -d -p 27017-27019:27017-27019 --name mongodb mongo:4.2.3
+	docker container run -d -p 27017-27019:27017-27019 --name mongodb mongo:4.2.3
 
 .PHONY:
 db-attach:
-	docker exec -it mongodb bin/bash
+	docker container exec -it mongodb bin/bash
 
 .PHONY:
-db-stop:
-	docker stop mongodb
-
-.PHONY:
-db-delete:
-	docker rm mongodb
+db-clean:
+	docker container rm -f mongodb
