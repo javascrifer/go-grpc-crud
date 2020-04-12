@@ -16,13 +16,13 @@ This project is a part of [course](https://www.udemy.com/course/grpc-golang/). P
 
 ## Local development
 
-- Start MongoDB docker container or install MongoDB locally to your device.
+### gRPC Server
+
+- Start MongoDB docker container.
 
 ```bash
-  make db-run # starts docker container
-  make db-attach # attaches to the docker container using interactive mode
-  make db-stop # stops docker container
-  make db-delete # deletes docker container
+  make run-db
+  make db-attach # attaches to container if you need to execute commands in it
 ```
 
 - Start Go gRPC server.
@@ -31,10 +31,16 @@ This project is a part of [course](https://www.udemy.com/course/grpc-golang/). P
   make run-server
 ```
 
+### gRPC Client
+
+- Start server and db using commands mentioned in **gRPC Server** section or run them using docker compose.
+
+```bash
+  make run-server-compose
+```
+
 - Start Go gRPC client.
 
 ```bash
   make run-client
 ```
-
-P.S. All the configs for the client and server are hard-coded.

@@ -4,6 +4,6 @@ network = "tcp"
 address = "0.0.0.0:50051"
 
 [mongo]
-url = ""
+url = "mongodb://mongodb:27017"
 db = "bloggrpc"
 collection = "blog"

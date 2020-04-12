@@ -1,0 +1,10 @@
+version: '2.0'
+
+services:
+  server:
+    build:
+      context: .
+    ports:
+      - '50051:50051'
+  mongodb:
+    image: mongo:4.2.3
